@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  api:
+    build: .
+    container_name: hospital-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: mysql+pymysql://hospital_user:hospital_password@db:3306/hospital_booking
+    depends_on:
+      - db
+    volumes:
+      - .:/app
+
+  db:
+    image: mysql:8.0
+    container_name: hospital-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: hospital_booking
+      MYSQL_USER: hospital_user
+      MYSQL_PASSWORD: hospital_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:

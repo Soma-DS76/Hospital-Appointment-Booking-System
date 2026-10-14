@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Hospital Queue WebSocket test</title>
+
+  <style >
+    
+    body { font: 16px system-ui, sans-serif; margin: 2rem auto; max-width: 760px; padding: 0 1rem; }
+    label { display: block; margin: 1rem 0 .35rem; }
+    input, select, button { font: inherit; padding: .5rem; }
+    input { box-sizing: border-box; width: 100%; }
+    button { margin: 1rem .5rem 1rem 0; }
+    pre { background: #dfe5f1; min-height: 12rem; overflow: auto; padding: 1rem; white-space: pre-wrap; }
+  </style>
+</head>
+<body style="background-color: rgb(105, 175, 233);">
+  <h1>Hospital WebSocket </h1>
+  <p>Use an access token from this application. The token is kept only in this page's memory.</p>
+
+  <label for="connection">Connection</label>
+  <select id="connection">
+    <option value="queue">Doctor queue</option>
+    <option value="notifications">Personal notifications</option>
+  </select>
+
+  <label for="doctorId">Doctor ID (queue connection only)</label>
+  <input id="doctorId" type="number" min="1" value="1">
+
+  <label for="token">Access token</label>
+  <input id="token" type="password" autocomplete="off" placeholder="Paste access token">
+
+  <button id="connect">Connect</button>
+  <button id="disconnect" disabled>Disconnect</button>
+  <p id="state">Disconnected</p>
+  <pre id="messages" aria-live="polite"></pre>
+
+  <script>
+    const connectionSelect = document.getElementById("connection");
+    const doctorInput = document.getElementById("doctorId");
+    const tokenInput = document.getElementById("token");
+    const connectButton = document.getElementById("connect");
+    const disconnectButton = document.getElementById("disconnect");
+    const state = document.getElementById("state");
+    const messages = document.getElementById("messages");
+    let socket;
+
+    function log(message) {
+      messages.textContent += `${new Date().toLocaleTimeString()} ${message}\n`;
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    connectButton.addEventListener("click", () => {
+      const token = tokenInput.value.trim();
+      if (!token) {
+        state.textContent = "Enter an access token first.";
+        return;
+      }
+
+      const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const path = connectionSelect.value === "queue"
+        ? `/ws/queue/${encodeURIComponent(doctorInput.value)}`
+        : "/ws/notifications";
+      socket = new WebSocket(`${scheme}//${window.location.host}${path}?token=${encodeURIComponent(token)}`);
+
+      socket.addEventListener("open", () => {
+        state.textContent = "Connected";
+        connectButton.disabled = true;
+        disconnectButton.disabled = false;
+        log("Connected.");
+      });
+      socket.addEventListener("message", (event) => log(event.data));
+      socket.addEventListener("error", () => log("WebSocket error."));
+      socket.addEventListener("close", (event) => {
+        state.textContent = `Disconnected (code ${event.code})`;
+        connectButton.disabled = false;
+        disconnectButton.disabled = true;
+        log(`Connection closed: ${event.code} ${event.reason}`);
+      });
+    });
+
+    disconnectButton.addEventListener("click", () => {
+      if (socket) socket.close();
+    });
+  </script>
+</body>
+</html>
